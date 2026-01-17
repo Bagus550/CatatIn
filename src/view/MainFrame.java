@@ -24,6 +24,11 @@ import java.util.Calendar;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerDateModel;
 
+import java.sql.*;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
+import config.DatabaseConnection;
+
 /**
  *
  * @author MyBook Z Series
@@ -307,6 +312,45 @@ public class MainFrame extends javax.swing.JFrame {
         ReportExporter.exportToExcel(tableTasks);
     }
 }
+    
+    private void cariData(String keyword) {
+        DefaultTableModel model = (DefaultTableModel) tableTasks.getModel(); // Ganti tblTasks sesuai nama variabel tabel lu
+        model.setRowCount(0);
+
+        // Query JOIN disesuaiin sama screenshot database lu
+        // Tabel: task, course, lecturer. Kolom: is_done, course_id, lecturer_id
+        String sql = "SELECT t.*, c.name AS course_name, l.name AS lecturer_name " +
+                     "FROM task t " +
+                     "LEFT JOIN course c ON t.course_id = c.id " +
+                     "LEFT JOIN lecturer l ON t.lecturer_id = l.id " +
+                     "WHERE t.title LIKE ? OR t.description LIKE ? OR c.name LIKE ?";
+
+        try (Connection conn = config.DatabaseConnection.getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
+            String wildCard = "%" + keyword + "%";
+            pst.setString(1, wildCard);
+            pst.setString(2, wildCard);
+            pst.setString(3, wildCard);
+
+            ResultSet rs = pst.executeQuery();
+
+            while (rs.next()) {
+                // Ambil data sesuai kolom di screenshot lu
+                int id = rs.getInt("id");
+                String title = rs.getString("title");
+                String course = rs.getString("course_name");
+                String lecturer = rs.getString("lecturer_name");
+                String deadline = rs.getString("deadline");
+                // is_done di DB lu (int 1/0), diubah jadi Selesai/Belum
+                String status = rs.getInt("is_done") == 1 ? "Selesai" : "Belum";
+
+                model.addRow(new Object[]{id, title, course, lecturer, deadline, status});
+            }
+        } catch (SQLException e) {
+            System.out.println("Error search: " + e.getMessage());
+        }
+    }
 
 
     /**
@@ -351,6 +395,8 @@ public class MainFrame extends javax.swing.JFrame {
         lblDateTime = new javax.swing.JLabel();
         jPanel1 = new javax.swing.JPanel();
         btnAddTask = new javax.swing.JButton();
+        txtSearch = new javax.swing.JTextField();
+        jLabel9 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Aplikasi Manjemen Tugas Gen-Z");
@@ -650,6 +696,14 @@ public class MainFrame extends javax.swing.JFrame {
             }
         });
 
+        txtSearch.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                txtSearchActionPerformed(evt);
+            }
+        });
+
+        jLabel9.setText("Cari");
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -657,13 +711,21 @@ public class MainFrame extends javax.swing.JFrame {
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(btnAddTask, javax.swing.GroupLayout.PREFERRED_SIZE, 121, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jLabel9)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 314, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(btnAddTask)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(txtSearch)
+                        .addComponent(jLabel9))
+                    .addComponent(btnAddTask, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -853,6 +915,12 @@ public class MainFrame extends javax.swing.JFrame {
         exportLaporan();
     }//GEN-LAST:event_btnLaporanActionPerformed
 
+    private void txtSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtSearchActionPerformed
+        String keyword = txtSearch.getText();
+
+        cariData(keyword);
+    }//GEN-LAST:event_txtSearchActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel TaskPanel;
     private javax.swing.JButton btnAddTask;
@@ -877,6 +945,7 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JLabel lblDateTime;
@@ -886,6 +955,7 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JScrollPane scrollTasks;
     private javax.swing.JTable tableTasks;
     private javax.swing.JTextField txtDescription;
+    private javax.swing.JTextField txtSearch;
     private javax.swing.JTextField txtTitle;
     // End of variables declaration//GEN-END:variables
 }
